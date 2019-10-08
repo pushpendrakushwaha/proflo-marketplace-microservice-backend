@@ -1,0 +1,15 @@
+version: '3'
+services:
+  marketplace-microservice-backend:
+    image: proflo/marketplace-microservice-backend
+    ports:
+      - "5000:80"
+    depends_on:
+      - marketplace-microservice-backend-db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      mongo_db: mongodb://marketplace-microservice-backend-db:27017
+  marketplace-microservice-backend-db:
+    image: mvertes/alpine-mongo
+    ports:
+      - "27017:27017"

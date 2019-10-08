@@ -1,0 +1,46 @@
+image: docker
+stages:
+ - build
+ - dockerize
+ - deploy
+# build-stage:
+#  stage: build
+#  image: mcr.microsoft.com/dotnet/core/sdk:2.2-alpine3.9
+#  script:
+#     - dotnet restore
+#     - dotnet build
+#     - dotnet publish
+#  artifacts:
+#     paths:
+#       - marketplace-microservice-backend/bin/Debug/netcoreapp2.2/publish
+#  tags:
+#     - immersive-cgi-w7-dotnet
+dockerize:
+ stage: dockerize
+ script:
+  - echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
+  - docker build -t proflo/marketplace-microservice-backend:${CI_COMMIT_SHORT_SHA} .
+  - docker tag proflo/marketplace-microservice-backend:${CI_COMMIT_SHORT_SHA} proflo/marketplace-microservice-backend:latest
+  - docker push proflo/marketplace-microservice-backend:${CI_COMMIT_SHORT_SHA}
+  - docker push proflo/marketplace-microservice-backend:latest
+
+
+  # - echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
+  # - docker build -t proflo/proflo-portal-backend_webapi .
+  # - docker push proflo/proflo-portal-backend_webapi
+ tags:
+   - immersive-cgi-w7-dotnet
+
+deploy:
+  stage: deploy
+  image: dtzar/helm-kubectl
+  script:
+    - kubectl config set-cluster k8s --server="${SERVER}"
+    - kubectl config set clusters.k8s.certificate-authority-data ${CERTIFICATE_AUTHORITY_DATA}
+    - kubectl config set-credentials gitlab --token="${USER_TOKEN}"
+    - kubectl config set-context default --cluster=k8s --user=gitlab
+    - kubectl config use-context default
+    - sed -i "s/<VERSION>/${CI_COMMIT_SHORT_SHA}/g" kube-manifest.yaml
+    - kubectl -n ${NAMESPACE} apply -f kube-manifest.yaml
+  tags:
+    - immersive-cgi-w7-dotnet
